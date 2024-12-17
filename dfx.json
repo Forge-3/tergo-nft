@@ -1,9 +1,20 @@
 {
   "canisters": {
-    "tergo_backend": {
-      "candid": "src/tergo_backend/tergo_backend.did",
-      "package": "tergo_backend",
-      "type": "rust"
+    "tergo_nft": {
+      "candid": "src/tergo_nft/tergo_nft.did",
+      "package": "tergo_nft",
+      "type": "custom",
+      "wasm": "target/wasm32-unknown-unknown/release/tergo_nft-opt.wasm.gz",
+      "build": "./build.sh tergo_nft",
+      "optimize": "cycles"
+    },
+    "tergo_nft_archive": {
+      "candid": "src/tergo_nft_archive/tergo_nft_archive.did",
+      "package": "tergo_nft_archive",
+      "type": "custom",
+      "wasm": "target/wasm32-unknown-unknown/release/tergo_nft_archive-opt.wasm.gz",
+      "build": "./build.sh tergo_nft_archive",
+      "optimize": "cycles"
     }
   },
   "defaults": {

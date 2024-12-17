@@ -1,5 +1,6 @@
 [workspace]
 members = [
-    "src/tergo_backend"
+    "src/tergo_nft",
+    "src/tergo_nft_archive"
 ]
 resolver = "2"

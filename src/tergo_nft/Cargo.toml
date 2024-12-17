@@ -1,0 +1,23 @@
+[package]
+name = "tergo_nft"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+candid = "0.10.8"
+ciborium = "0.2.2"
+ic-cdk = "0.17"
+ic-cdk-macros = "0.17"
+ic-stable-structures = "0.6.6"
+ic-certified-map = "0.4"
+icrc-ledger-types = "0.1.6"
+serde = { version = "1.0.216", features = ["derive"] }
+serde_bytes = "0.11"
+serde_cbor = "0.11.2"
+crc32fast = "1.4.2"
+sha2 = "0.10.8"
+hex = "0.4.3"
+ic-cdk-timers = "0.11.0"
+
+[lib]
+crate-type = ["cdylib"]
