@@ -230,6 +230,61 @@ impl State {
         self.icrc7_atomic_batch_transfers
     }
 
+    pub fn icrc7_collection_metadata(&self) -> BTreeMap<String, String> {
+        let mut metadata = BTreeMap::new();
+
+        metadata.insert("symbol".to_string(), self.icrc7_symbol.clone());
+        metadata.insert("name".to_string(), self.icrc7_name.clone());
+
+        if let Some(description) = &self.icrc7_description {
+            metadata.insert("description".to_string(), description.clone());
+        }
+
+        if let Some(logo) = &self.icrc7_logo {
+            metadata.insert("logo".to_string(), logo.clone());
+        }
+
+        metadata.insert("total_supply".to_string(), self.icrc7_total_supply.to_string());
+
+        if let Some(supply_cap) = &self.icrc7_supply_cap {
+            metadata.insert("supply_cap".to_string(), supply_cap.to_string());
+        }
+
+        if let Some(max_query_batch_size) = &self.icrc7_max_query_batch_size {
+            metadata.insert("max_query_batch_size".to_string(), max_query_batch_size.to_string());
+        }
+
+        if let Some(max_update_batch_size) = &self.icrc7_max_update_batch_size {
+            metadata.insert("max_update_batch_size".to_string(), max_update_batch_size.to_string());
+        }
+
+        if let Some(default_take_value) = &self.icrc7_default_take_value {
+            metadata.insert("default_take_value".to_string(), default_take_value.to_string());
+        }
+
+        if let Some(max_take_value) = &self.icrc7_max_take_value {
+            metadata.insert("max_take_value".to_string(), max_take_value.to_string());
+        }
+
+        if let Some(max_memo_size) = &self.icrc7_max_memo_size {
+            metadata.insert("max_memo_size".to_string(), max_memo_size.to_string());
+        }
+
+        if let Some(atomic_batch_transfers) = &self.icrc7_atomic_batch_transfers {
+            metadata.insert("atomic_batch_transfers".to_string(), atomic_batch_transfers.to_string());
+        }
+
+        if let Some(tx_window) = &self.tx_window {
+            metadata.insert("tx_window".to_string(), tx_window.to_string());
+        }
+
+        if let Some(permitted_drift) = &self.permitted_drift {
+            metadata.insert("permitted_drift".to_string(), permitted_drift.to_string());
+        }
+
+        metadata
+    }
+
     pub fn icrc7_owner_of(&self, token_id: &[u128]) -> Vec<Option<Account>> {
         let mut res = vec![None; token_id.len()];
         for (index, id) in token_id.iter().enumerate() {

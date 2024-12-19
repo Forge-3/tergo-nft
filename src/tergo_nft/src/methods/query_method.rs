@@ -1,7 +1,7 @@
 use candid::Principal;
 use ic_cdk_macros::query;
 use icrc_ledger_types::icrc1::account::Account;
-
+use std::collections::BTreeMap;
 use crate::{types::icrc7_types::Transaction, state::STATE, types::icrc7_types::Icrc7TokenMetadata, types::icrc7_types::Standard};
 
 #[query]
@@ -65,12 +65,17 @@ pub fn icrc7_atomic_batch_transfers() -> Option<bool> {
 }
 
 #[query]
+pub fn icrc7_collection_metadata() -> BTreeMap<String, String> {
+    STATE.with(|s| s.borrow().icrc7_collection_metadata())
+}
+
+#[query]
 pub fn icrc7_owner_of(ids: Vec<u128>) -> Vec<Option<Account>> {
     STATE.with(|s| s.borrow().icrc7_owner_of(&ids))
 }
 
 #[query]
-pub fn icrc7_supported_standards() -> Vec<Standard> {
+pub fn icrc10_supported_standards() -> Vec<Standard> {
     vec![
         Standard {
             name: "ICRC-7".into(),

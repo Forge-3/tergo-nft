@@ -15,5 +15,6 @@ use crate::types::icrc3_types::*;
 use crate::types::icrc7_types::*;
 use candid::{Nat, Principal};
 use icrc_ledger_types::{icrc1::account::Account, icrc3::blocks::DataCertificate};
+use std::collections::BTreeMap;
 
 ic_cdk::export_candid!();
