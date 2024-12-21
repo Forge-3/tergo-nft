@@ -342,29 +342,36 @@ impl State {
     ) -> Result<(), TransferError> {
         let mut count = self.txn_count;
         while count != 0 {
-            let txn = self.txn_ledger.get(&count).unwrap();
-            if txn.ts < *allowed_past_time {
-                return Ok(());
-            }
-            if txn.op == String::from(TRANSACTION_TRANSFER_OP)
-                || txn.op == String::from(TRANSACTION_TRANSFER_FROM_OP)
-            {
-                if args.token_id == txn.tid
-                    && caller == txn.from.as_ref().unwrap()
-                    && args.to == txn.to.unwrap()
-                    && args.memo == txn.memo
-                    && args.created_at_time == Some(txn.ts)
-                {
-                    return Err(TransferError::Duplicate {
-                        duplicate_of: count,
-                    });
-                } else {
+            match self.txn_ledger.get(&count) {
+                Some(txn) => {
+                    if txn.ts < *allowed_past_time {
+                        return Ok(());
+                    }
+                    if txn.op == String::from(TRANSACTION_TRANSFER_OP)
+                        || txn.op == String::from(TRANSACTION_TRANSFER_FROM_OP)
+                    {
+                        if args.token_id == txn.tid
+                            && caller == txn.from.as_ref().unwrap()
+                            && args.to == txn.to.unwrap()
+                            && args.memo == txn.memo
+                            && args.created_at_time == Some(txn.ts)
+                        {
+                            return Err(TransferError::Duplicate {
+                                duplicate_of: count,
+                            });
+                        } else {
+                            count -= 1;
+                            continue;
+                        }
+                    } else {
+                        count -= 1;
+                        continue;
+                    }
+                }
+                None => {
                     count -= 1;
                     continue;
                 }
-            } else {
-                count -= 1;
-                continue;
             }
         }
         Ok(())
@@ -865,6 +872,7 @@ impl State {
                 }
                 Some(mut token_approval) => {
                     token_approval.approve(caller, arg.approval_info.clone());
+                    self.token_approvals.insert(arg.token_id, token_approval);
                 }
             }
 
@@ -982,6 +990,7 @@ impl State {
                 Some(mut collection_approval) => {
                     collection_approval
                         .approve(arg.approval_info.spender, arg.approval_info.clone());
+                    self.collection_approvals.insert(user_account, collection_approval);
                 }
             }
 
@@ -1099,6 +1108,7 @@ impl State {
                 }
                 Some(mut token_approval) => {
                     token_approval.remove_approve(caller, arg.spender);
+                    self.token_approvals.insert(arg.token_id, token_approval);
                 }
             }
 
@@ -1221,6 +1231,7 @@ impl State {
                     }
                     Some(spender) => {
                         collection_approval.remove_approve(spender);
+                        self.collection_approvals.insert(user_account, collection_approval);
                     }
                 },
             }
@@ -1244,23 +1255,25 @@ impl State {
         arg: &TransferFromArg,
         current_time: &u64,
     ) -> Result<(), TransferFromError> {
-        if arg.to == *caller {
-            return Err(TransferFromError::GenericBatchError {
-                error_code: 1,
-                message: "Spender cannot be caller".into(),
-            });
+        if let None = self.tokens.get(&arg.token_id) {
+            return Err(TransferFromError::NonExistingTokenId);
         }
 
+        if arg.to == arg.from {
+            return Err(TransferFromError::InvalidRecipient);
+        }
+
+        let allowed_past_time = *current_time
+        - self.tx_window.unwrap_or(State::DEFAULT_TX_WINDOW)
+        - self
+            .permitted_drift
+            .unwrap_or(State::DEFAULT_PERMITTED_DRIFT);
+        let allowed_future_time = *current_time
+        + self
+            .permitted_drift
+            .unwrap_or(State::DEFAULT_PERMITTED_DRIFT);
+
         if let Some(time) = arg.created_at_time {
-            let allowed_past_time = *current_time
-                - self.tx_window.unwrap_or(State::DEFAULT_TX_WINDOW)
-                - self
-                    .permitted_drift
-                    .unwrap_or(State::DEFAULT_PERMITTED_DRIFT);
-            let allowed_future_time = *current_time
-                + self
-                    .permitted_drift
-                    .unwrap_or(State::DEFAULT_PERMITTED_DRIFT);
             if time < allowed_past_time {
                 return Err(TransferFromError::TooOld);
             } else if time > allowed_future_time {
@@ -1268,22 +1281,31 @@ impl State {
                     ledger_time: current_time.clone(),
                 });
             }
+        }
 
-            if !self.is_approved_by_collection(&arg.from, &caller, *current_time)
-                && !self.is_approved_by_token(&arg.token_id, &arg.from, &caller, *current_time)
-            {
-                return Err(TransferFromError::Unauthorized);
-            }
+        let token = self.tokens.get(&arg.token_id).unwrap();
+        if token.token_owner != arg.from {
+            return Err(TransferFromError::GenericBatchError {
+                error_code: 4,
+                message: "The specified principal is not the owner of the token".into(),
+            });
+        }
 
-            let transfer_arg: TransferArg = arg.clone().into();
-            let result = self.txn_deduplication_check(&allowed_past_time, caller, &transfer_arg);
-            match result {
-                Ok(_) => (),
-                Err(_) => {
-                    return Err(TransferFromError::Duplicate {
-                        duplicate_of: (arg.token_id),
-                    });
-                }
+        if !self.is_approved_by_collection(&arg.from, &caller, *current_time)
+        && !self.is_approved_by_token(&arg.token_id, &arg.from, &caller, *current_time)
+        && token.token_owner != *caller
+        {
+            return Err(TransferFromError::Unauthorized);
+        }
+
+        let transfer_arg: TransferArg = arg.clone().into();
+        let result = self.txn_deduplication_check(&allowed_past_time, caller, &transfer_arg);
+        match result {
+            Ok(_) => (),
+            Err(_) => {
+                return Err(TransferFromError::Duplicate {
+                    duplicate_of: (arg.token_id),
+                });
             }
         }
 
@@ -1398,14 +1420,15 @@ impl State {
                         if key <= &prev.approval_info.spender {
                             continue;
                         }
-                        results.push(TokenApproval {
-                            token_id: token_id.clone(),
-                            approval_info: approval.clone(),
-                        });
+                    }
 
-                        if results.len() as u128 >= take {
-                            return results;
-                        }
+                    results.push(TokenApproval {
+                        token_id: token_id.clone(),
+                        approval_info: approval.clone(),
+                    });
+
+                    if results.len() as u128 >= take {
+                        return results;
                     }
                 }
             }
@@ -1430,11 +1453,12 @@ impl State {
                         if key <= &prev.spender {
                             continue;
                         }
-                        results.push(approval.clone());
+                    }
 
-                        if results.len() as u128 >= take {
-                            return results;
-                        }
+                    results.push(approval.clone());
+
+                    if results.len() as u128 >= take {
+                        return results;
                     }
                 }
             }
