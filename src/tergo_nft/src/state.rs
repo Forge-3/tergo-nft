@@ -8,7 +8,7 @@ use crate::{
     },
     types::icrc37_types::{
         ApproveCollectionArg, ApproveCollectionResult, ApproveTokenArg, ApproveTokenResult,
-        CollectionApproval, CollectionApprovalInfo, IsApprovedArg, LedgerInfo, Metadata,
+        CollectionApproval, CollectionApprovalInfo, IsApprovedArg, LedgerInfo,
         RevokeCollectionApprovalArg, RevokeCollectionApprovalResult, RevokeTokenApprovalArg,
         RevokeTokenApprovalResult, TokenApproval, TokenApprovalInfo, TransferFromArg,
         TransferFromResult, UserAccount,
@@ -295,30 +295,20 @@ impl State {
         res
     }
 
-    pub fn icrc37_metadata(&self) -> Metadata {
-        let mut res = Metadata::new();
-        if self
-            .approval_ledger_info
-            .max_approvals_per_token_or_collection
-            > 0
-        {
-            res.insert(
-                "icrc37:max_approvals_per_token_or_collection".to_string(),
-                Value::Nat(
-                    (self
-                        .approval_ledger_info
-                        .max_approvals_per_token_or_collection as u64)
-                        .into(),
-                ),
-            );
-        }
-        if self.approval_ledger_info.max_revoke_approvals > 0 {
-            res.insert(
-                "icrc37:max_revoke_approvals".to_string(),
-                Value::Nat((self.approval_ledger_info.max_revoke_approvals as u64).into()),
-            );
-        }
-        res
+    pub fn icrc37_metadata(&self) -> BTreeMap<String, String> {
+        let mut metadata = BTreeMap::new();
+
+        metadata.insert(
+            "max_approvals_per_token_or_collection".to_string(),
+            self.approval_ledger_info.max_approvals_per_token_or_collection.to_string()
+        );
+
+        metadata.insert(
+            "max_revoke_approvals".to_string(),
+            self.approval_ledger_info.max_revoke_approvals.to_string()
+        );
+
+        metadata
     }
 
     pub fn get_archive_log_canister(&self) -> Option<Principal> {

@@ -1,15 +1,17 @@
+use std::collections::BTreeMap;
+
 use candid::Nat;
 use ic_cdk_macros::query;
 use icrc_ledger_types::icrc1::account::Account;
 
 use crate::{
-    types::icrc37_types::{CollectionApproval, IsApprovedArg, Metadata, TokenApproval},
+    types::icrc37_types::{CollectionApproval, IsApprovedArg, TokenApproval},
     state::STATE,
 };
 
 // Returns the approval-related metadata of the ledger implementation.
 #[query]
-pub fn icrc37_metadata() -> Metadata {
+pub fn icrc37_metadata() -> BTreeMap<String, String> {
     STATE.with(|s| s.borrow().icrc37_metadata())
 }
 

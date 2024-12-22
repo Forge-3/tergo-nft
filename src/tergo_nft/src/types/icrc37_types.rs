@@ -2,10 +2,7 @@ use std::collections::BTreeMap;
 
 use candid::{CandidType, Decode, Encode};
 use ic_stable_structures::{storable::Bound, Storable};
-use icrc_ledger_types::{
-    icrc::generic_value::Map,
-    icrc1::account::{Account, Subaccount},
-};
+use icrc_ledger_types::icrc1::account::{Account, Subaccount};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -16,7 +13,6 @@ use crate::{
     types::icrc7_types::TransferArg,
 };
 
-pub type Metadata = Map;
 
 #[derive(CandidType, Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UserAccount(Account);
