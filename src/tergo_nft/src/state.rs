@@ -84,6 +84,8 @@ impl Icrc7Token {
 
     fn token_metadata(&self) -> Icrc7TokenMetadata {
         let mut metadata = BTreeMap::<String, Value>::new();
+        metadata.insert("Id".into(), Value::Text(self.token_id.clone().to_string()));
+        metadata.insert("Owner".into(), Value::Text(self.token_owner.clone().to_string()));
         metadata.insert("Name".into(), Value::Text(self.token_name.clone()));
         metadata.insert("Symbol".into(), Value::Text(self.token_name.clone()));
         if let Some(ref description) = self.token_description {
@@ -636,11 +638,11 @@ impl State {
                 });
             }
         }
-        if &arg.token_id < &self.next_token_id {
-            return Err(MintError::TokenIdMinimumLimit);
-        }
         if let Some(_) = self.tokens.get(&arg.token_id) {
             return Err(MintError::TokenIdAlreadyExist);
+        }
+        if &arg.token_id < &self.next_token_id {
+            return Err(MintError::TokenIdMinimumLimit);
         }
         Ok(())
     }
