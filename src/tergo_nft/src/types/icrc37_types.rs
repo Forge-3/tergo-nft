@@ -121,6 +121,10 @@ impl TokenApprovalInfo {
         self.0
     }
 
+    pub fn as_map(&self) -> &BTreeMap<Account, BTreeMap<Account, ApprovalInfo>> {
+        &self.0
+    }
+
     pub fn new(owner: Account, approval: ApprovalInfo) -> Self {
         let mut token_approval = BTreeMap::new();
         let mut approval_info = BTreeMap::new();
@@ -150,8 +154,11 @@ impl TokenApprovalInfo {
                     self.0.remove(&owner);
                 }
                 Some(spender) => {
-                    approvals.remove(&spender);
+                approvals.remove(&spender);
+                if approvals.is_empty() {
+                    self.0.remove(&owner);
                 }
+            }
             },
         }
     }
@@ -194,6 +201,10 @@ impl CollectionApprovalInfo {
                 self.0.remove(&spender);
             }
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 

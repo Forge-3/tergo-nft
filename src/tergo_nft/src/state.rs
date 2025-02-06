@@ -794,7 +794,7 @@ impl State {
             None => Err(ApproveTokenError::NonExistingTokenId),
             Some(ref token) => {
                 if token.token_owner != *caller {
-                    return Err(ApproveTokenError::NonExistingTokenId);
+                    return Err(ApproveTokenError::Unauthorized);
                 }
                 Ok(())
             }
@@ -1028,10 +1028,28 @@ impl State {
         };
 
         match self.tokens.get(&arg.token_id) {
-            None => Err(RevokeTokenApprovalError::NonExistingTokenId),
+            None => return Err(RevokeTokenApprovalError::NonExistingTokenId),
             Some(ref token) => {
                 if token.token_owner != *caller {
                     return Err(RevokeTokenApprovalError::Unauthorized);
+                }
+            }
+        }
+        
+        match self.token_approvals.get(&arg.token_id) {
+            None => Err(RevokeTokenApprovalError::ApprovalDoesNotExist),
+            Some(token_approval) => {
+                match arg.spender {
+                    Some(spender) => {
+                        if token_approval.as_map().get(&caller).map_or(true, |approvals| !approvals.contains_key(&spender)) {
+                            return Err(RevokeTokenApprovalError::ApprovalDoesNotExist);
+                        }
+                    }
+                    None => {
+                        if token_approval.as_map().get(&caller).is_none() {
+                            return Err(RevokeTokenApprovalError::ApprovalDoesNotExist);
+                        }
+                    }
                 }
                 Ok(())
             }
@@ -1096,10 +1114,17 @@ impl State {
 
             match self.token_approvals.get(&arg.token_id) {
                 None => {
-                    txn_results.insert(index, Some(Ok(arg.token_id)));
+                    txn_results.insert(index, Some(Err(RevokeTokenApprovalError::ApprovalDoesNotExist)));
                 }
                 Some(mut token_approval) => {
-                    token_approval.remove_approve(caller, arg.spender);
+                    match arg.spender {
+                        Some(spender) => {
+                            token_approval.remove_approve(caller, Some(spender));
+                        }
+                        None => {
+                            token_approval.remove_approve(caller, None);
+                        }
+                    }
                     self.token_approvals.insert(arg.token_id, token_approval);
                 }
             }
@@ -1115,6 +1140,7 @@ impl State {
             );
             txn_results.insert(index, Some(Ok(tid)))
         }
+        ic_cdk::println!("txn_results");
         return txn_results;
     }
 
@@ -1138,11 +1164,10 @@ impl State {
                     .permitted_drift
                     .unwrap_or(State::DEFAULT_PERMITTED_DRIFT);
 
-            if created_at_time < allowed_future_time {
+            if created_at_time > allowed_future_time {
                 return Err(RevokeCollectionApprovalError::TooOld);
             }
         }
-
         if let Some(ref memo) = arg.memo {
             let max_memo_size = self
                 .icrc7_max_memo_size
@@ -1154,6 +1179,18 @@ impl State {
                 });
             }
         };
+
+        let user_account = UserAccount::new(*caller);
+        match self.collection_approvals.get(&user_account) {
+            None => return Err(RevokeCollectionApprovalError::ApprovalDoesNotExist),
+            Some(collection_approval) => {
+                if let Some(spender) = arg.spender {
+                    if !collection_approval.into_map().contains_key(&spender) {
+                        return Err(RevokeCollectionApprovalError::ApprovalDoesNotExist);
+                    }
+                }
+            }
+        }
         Ok(())
     }
 
@@ -1186,6 +1223,7 @@ impl State {
                 owner: caller.clone(),
                 subaccount: arg.from_subaccount,
             });
+
             if let Err(e) = self.mock_revoke_collection_approve(&caller, arg, &current_time) {
                 txn_results.insert(index, Some(Err(e)))
             }
@@ -1216,14 +1254,21 @@ impl State {
             }
 
             match self.collection_approvals.get(&user_account) {
-                None => (),
+                None => {
+                    txn_results.insert(index, Some(Err(RevokeCollectionApprovalError::ApprovalDoesNotExist)));
+                    continue;
+                }
                 Some(mut collection_approval) => match arg.spender {
                     None => {
                         self.collection_approvals.remove(&user_account);
                     }
                     Some(spender) => {
                         collection_approval.remove_approve(spender);
-                        self.collection_approvals.insert(user_account, collection_approval);
+                        if collection_approval.is_empty() {
+                            self.collection_approvals.remove(&user_account);
+                        } else {
+                            self.collection_approvals.insert(user_account, collection_approval);
+                        }
                     }
                 },
             }
@@ -1344,6 +1389,9 @@ impl State {
                 owner: caller.clone(),
                 subaccount: arg.spender_subaccount,
             });
+            arg.from = account_transformer(arg.from.clone());
+            arg.to = account_transformer(arg.to.clone());
+
             if let Err(e) = self.mock_transfer_from(&caller, arg, &current_time) {
                 txn_results.insert(index, Some(Err(e)))
             }
@@ -1561,7 +1609,7 @@ impl State {
         prev: Option<u128>,
         take: Option<u128>,
     ) -> Vec<u128> {
-        let take = take.unwrap_or(State::DEFAULT_TAKE_VALUE);
+        let mut take = take.unwrap_or(State::DEFAULT_TAKE_VALUE);
         if take > State::DEFAULT_MAX_TAKE_VALUE {
             ic_cdk::trap("Exceeds Max Take Value")
         }
@@ -1572,8 +1620,11 @@ impl State {
             }
         }
         owned_tokens.sort();
+
+        take = std::cmp::min(take, owned_tokens.len() as u128);
+
         match prev {
-            None => owned_tokens[0..=take as usize].to_vec(),
+            None => owned_tokens[0..take as usize].to_vec(),
             Some(prev) => match owned_tokens.iter().position(|id| *id == prev) {
                 None => vec![],
                 Some(index) => owned_tokens
