@@ -85,9 +85,8 @@ fn block_range(start: u64, length: u64) -> Vec<Block> {
 
     let length = length.min(with_archive_opts(|opts| opts.max_transactions_per_response));
     with_blocks(|blocks| {
-        let limit = blocks.len().min(offset.saturating_add(length));
-        (offset..limit)
-            .map(|i| blocks.get(&(i as u128)).unwrap())
-            .collect()
+        // ic_cdk::println!("Stored block indexes: {:?}", blocks.keys().collect::<Vec<_>>());
+        // ic_cdk::println!("Returned block indexes: {:?}", blocks.keys().skip(offset as usize).take(length as usize).collect::<Vec<_>>());
+        blocks.values().skip(offset as usize).take(length as usize).collect::<Vec<_>>()
     })
 }

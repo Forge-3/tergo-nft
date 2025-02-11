@@ -243,7 +243,7 @@ impl Default for ArchiveSetting {
     fn default() -> Self {
         Self {
             archive_controllers: None,
-            archive_cycles: 2_000_000_000_000,
+            archive_cycles: 5_000_000_000_000,
             archive_index_type: IndexType::Stable,
             max_active_records: 2000,
             max_archive_pages: 62500,

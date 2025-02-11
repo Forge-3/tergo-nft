@@ -255,6 +255,7 @@ service : (InitArg) -> {
   archive_log_canister : () -> (opt principal) query;
   burn : (vec BurnArg) -> (vec opt Result);
   get_tip : () -> (Tip) query;
+  icrc10_supported_standards : () -> (vec Standard) query;
   icrc37_approve_collection : (vec ApproveCollectionArg) -> (vec opt Result_1);
   icrc37_approve_tokens : (vec ApproveTokenArg) -> (vec opt Result_2);
   icrc37_get_collection_approvals : (Account, opt ApprovalInfo, opt nat) -> (
@@ -266,7 +267,7 @@ service : (InitArg) -> {
   icrc37_is_approved : (vec IsApprovedArg) -> (vec bool) query;
   icrc37_max_approvals_per_token_or_collection : () -> (opt nat) query;
   icrc37_max_revoke_approvals : () -> (opt nat) query;
-  icrc37_metadata : () -> (vec record { text; Value }) query;
+  icrc37_metadata : () -> (vec record { text; text }) query;
   icrc37_revoke_collection_approvals : (vec RevokeCollectionApprovalArg) -> (
       vec opt Result_3,
     );
@@ -280,6 +281,7 @@ service : (InitArg) -> {
   icrc3_supported_block_types : () -> (vec BlockType) query;
   icrc7_atomic_batch_transfers : () -> (opt bool) query;
   icrc7_balance_of : (vec Account) -> (vec nat) query;
+  icrc7_collection_metadata : () -> (vec record { text; text }) query;
   icrc7_default_take_value : () -> (opt nat) query;
   icrc7_description : () -> (opt text) query;
   icrc7_logo : () -> (opt text) query;
@@ -290,7 +292,6 @@ service : (InitArg) -> {
   icrc7_name : () -> (text) query;
   icrc7_owner_of : (vec nat) -> (vec opt Account) query;
   icrc7_supply_cap : () -> (opt nat) query;
-  icrc7_supported_standards : () -> (vec Standard) query;
   icrc7_symbol : () -> (text) query;
   icrc7_token_metadata : (vec nat) -> (
       vec opt vec record { text; Value },

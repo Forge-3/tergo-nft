@@ -24,7 +24,7 @@ dfx deploy tergo_nft --argument "(record{
     archiveIndexType= variant {Stable};
     maxArchivePages= 3;
     settleToRecords= 2;
-    archiveCycles= 1000000000000;
+    archiveCycles= 5000000000000;
     maxActiveRecords= 4;
     maxRecordsInArchiveInstance= 4;
     archiveControllers= null
