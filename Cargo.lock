@@ -729,6 +729,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "tergo_id_store"
+version = "0.1.0"
+dependencies = [
+ "candid",
+ "hex",
+ "ic-cdk",
+ "ic-cdk-macros",
+ "ic-cdk-timers",
+ "ic-stable-structures",
+ "serde",
+ "serde_bytes",
+ "serde_cbor",
+]
+
+[[package]]
 name = "tergo_nft"
 version = "0.1.0"
 dependencies = [

@@ -2,7 +2,7 @@ DEFAULT=$(dfx identity get-principal)
 
 dfx deploy tergo_nft --argument "(record{
   minting_account= opt record {
-    owner = principal \"$DEFAULT\";
+    owner = principal \"lzqbk-6v6gv-xjntg-xclu6-ievdu-5ygoq-qk7wp-yjwol-svzwg-fs5gs-qqe\";
     subaccount = opt blob \"\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\";
   };
   icrc7_supply_cap= null;
@@ -37,3 +37,5 @@ dfx deploy tergo_nft_archive --argument "(record {
   first_index= 0;
   max_pages= 3;
 })"
+
+dfx deploy tergo_id_store --argument "(principal \"lzqbk-6v6gv-xjntg-xclu6-ievdu-5ygoq-qk7wp-yjwol-svzwg-fs5gs-qqe\")"

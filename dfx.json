@@ -15,6 +15,14 @@
       "wasm": "target/wasm32-unknown-unknown/release/tergo_nft_archive-opt.wasm.gz",
       "build": "./build.sh tergo_nft_archive",
       "optimize": "cycles"
+    },
+    "tergo_id_store": {
+      "candid": "src/tergo_id_store/tergo_id_store.did",
+      "package": "tergo_id_store",
+      "type": "custom",
+      "wasm": "target/wasm32-unknown-unknown/release/tergo_id_store-opt.wasm.gz",
+      "build": "./build.sh tergo_id_store",
+      "optimize": "cycles"
     }
   },
   "defaults": {

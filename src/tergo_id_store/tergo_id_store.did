@@ -1,0 +1,8 @@
+service : (principal) -> {
+  add_user : (text) -> ();
+  get_all_curveids : () -> (vec blob) query;
+  get_curveid_by_uuid : (text) -> (opt blob) query;
+  get_uuid_by_curveid : (blob) -> (opt text) query;
+  remove_user_by_curveid : (blob) -> ();
+  remove_user_by_uuid : (text) -> ();
+}
