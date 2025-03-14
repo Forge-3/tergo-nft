@@ -111,6 +111,7 @@ type IsApprovedArg = record {
 };
 type MintArg = record {
   to : Account;
+  token_image : opt blob;
   token_id : nat;
   memo : opt blob;
   from_subaccount : opt blob;
@@ -254,6 +255,7 @@ type WalletReceiveResult = record { accepted : nat64 };
 service : (InitArg) -> {
   archive_log_canister : () -> (opt principal) query;
   burn : (vec BurnArg) -> (vec opt Result);
+  get_image : (nat) -> (opt blob) query;
   get_tip : () -> (Tip) query;
   icrc10_supported_standards : () -> (vec Standard) query;
   icrc37_approve_collection : (vec ApproveCollectionArg) -> (vec opt Result_1);

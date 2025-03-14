@@ -47,6 +47,7 @@ pub struct Icrc7Token {
     pub token_description: Option<String>,
     pub token_logo: Option<String>,
     pub token_owner: Account,
+    pub token_image: Option<Vec<u8>>,
 }
 
 impl Storable for Icrc7Token {
@@ -68,6 +69,7 @@ impl Icrc7Token {
         token_description: Option<String>,
         token_logo: Option<String>,
         token_owner: Account,
+        token_image: Option<Vec<u8>>,
     ) -> Self {
         Self {
             token_id,
@@ -75,6 +77,7 @@ impl Icrc7Token {
             token_logo,
             token_owner,
             token_description,
+            token_image,
         }
     }
 
@@ -93,6 +96,9 @@ impl Icrc7Token {
         }
         if let Some(ref logo) = self.token_logo {
             metadata.insert("Logo".into(), Value::Text(logo.clone()));
+        }
+        if let Some(ref image) = self.token_image {
+            metadata.insert("Image_Size".into(), Value::Text(image.len().to_string()));
         }
         metadata
     }
@@ -664,6 +670,7 @@ impl State {
             arg.token_description.clone(),
             arg.token_logo,
             arg.to.clone(),
+            arg.token_image,
         );
         let token_metadata = token.token_metadata();
         self.tokens.insert(arg.token_id, token);
@@ -1886,6 +1893,10 @@ impl State {
     pub fn add_archive(&mut self, canister_id: Principal, range: TransactionRange) -> bool {
         self.archive_ledger_info.archives.insert(canister_id, range);
         return true;
+    }
+
+    pub fn get_image(&self, token_id: u128) -> Option<Vec<u8>> {
+        self.tokens.get(&token_id).and_then(|token| token.token_image.clone())
     }
 }
 

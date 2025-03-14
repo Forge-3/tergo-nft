@@ -130,3 +130,8 @@ pub fn txn_logs(page_number: u32, page_size: u32) -> Vec<Transaction> {
 pub fn archive_log_canister() -> Option<Principal> {
     STATE.with(|s| s.borrow().get_archive_log_canister())
 }
+
+#[query]
+pub fn get_image(token_id: u128) -> Option<Vec<u8>> {
+    STATE.with(|s| s.borrow().get_image(token_id))
+}

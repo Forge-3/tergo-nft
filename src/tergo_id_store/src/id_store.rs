@@ -8,14 +8,13 @@ use ic_stable_structures::{
     DefaultMemoryImpl,
 };
 
-pub type CurveId = [u8; 12];
-pub type UUID = String;
+pub type UserId = String;
 
 const USER_DB_MEMORY_ID: MemoryId = MemoryId::new(0);
 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
-    static USER_DB: RefCell<StableBTreeMap<CurveId, UUID, VirtualMemory<DefaultMemoryImpl>>> = MEMORY_MANAGER
+    static USER_DB: RefCell<StableBTreeMap<UserId, Principal, VirtualMemory<DefaultMemoryImpl>>> = MEMORY_MANAGER
         .with(|m| 
             RefCell::new(
                 StableBTreeMap::init(
@@ -42,87 +41,89 @@ fn ensure_master_principal() {
 }
 
 #[update]
-pub fn add_user(uuid: UUID) {
+pub fn add_user(user_id: UserId, principal: Principal) {
     ensure_master_principal();
 
     USER_DB.with(|user_db| {
         let mut db = user_db.borrow_mut();
 
-        let new_id = if db.is_empty() {
-            [0u8; 12]
-        } else {
-            let last_id = db.keys().max().unwrap();
-            let mut new_id = last_id;
-            for i in (0..12).rev() {
-                if new_id[i] < 255 {
-                    new_id[i] += 1;
-                    break;
-                } else {
-                    new_id[i] = 0;
-                }
-            }
-            new_id
-        };
-
-        if db.contains_key(&new_id) || db.values().any(|v| v == uuid) {
-            ic_cdk::trap("User ID or UUID already exists.");
+        if db.contains_key(&user_id) {
+            ic_cdk::trap("User ID already exists.");
         }
 
-        db.insert(new_id.clone(), uuid);
+        if db.values().any(|p| p == principal) {
+            ic_cdk::trap("Principal already associated with a user.");
+        }
+
+        db.insert(user_id.clone(), principal);
+        ic_cdk::println!("user_id: {}", user_id);
+
     });
 }
 
 #[update]
-pub fn remove_user_by_curveid(id: CurveId) {
+pub fn remove_user_by_userid(user_id: UserId) {
     ensure_master_principal();
 
     USER_DB.with(|user_db| {
         let mut db = user_db.borrow_mut();
-        if db.remove(&id).is_none() {
+
+        if db.remove(&user_id).is_none() {
             ic_cdk::trap("User ID not found.");
         }
     });
 }
 
+#[query]
+pub fn get_principal_by_userid(user_id: UserId) -> Option<Principal> {
+    ensure_master_principal();
+
+    USER_DB.with(|user_db| {
+        user_db.borrow().get(&user_id).map(|s| s.clone())
+    })
+}
+
+#[query]
+pub fn get_userid_by_principal(principal: Principal) -> Option<UserId> {
+    ensure_master_principal();
+
+    USER_DB.with(|user_db| {
+        user_db.borrow().iter().find_map(|(user_id, p)| if p == principal { Some(user_id.clone()) } else { None })
+    })
+}
+
+#[query]
+pub fn get_all_userids() -> Vec<UserId> {
+    ensure_master_principal();
+
+    USER_DB.with(|user_db| {
+        user_db.borrow().keys().map(|key| key.clone()).collect::<Vec<UserId>>()
+    })
+}
+
+#[query]
+pub fn get_userids_by_principals(principals: Vec<Principal>) -> Vec<Option<UserId>> {
+    ensure_master_principal();
+
+    USER_DB.with(|user_db| {
+        principals.iter().map(|principal| {
+            user_db.borrow().iter().find_map(|(user_id, p)| {
+                if p == *principal {
+                    Some(user_id.clone())
+                } else {
+                    None
+                }
+            })
+        }).collect()
+    })
+}
+
 #[update]
-pub fn remove_user_by_uuid(uuid: UUID) {
+pub fn change_master_principal(new_master_principal: Principal) {
     ensure_master_principal();
 
-    USER_DB.with(|user_db| {
-        let mut db = user_db.borrow_mut();
-
-        if let Some(id) = db.iter().find_map(|(k, v)| if *v == uuid { Some(k.clone()) } else { None }) {
-            db.remove(&id);
-        } else {
-            ic_cdk::trap("UUID not found.");
-        }
+    MASTER_PRINCIPAL.with(|mw| {
+        *mw.borrow_mut() = Some(new_master_principal);
     });
-}
-
-#[query]
-pub fn get_curveid_by_uuid(uuid: UUID) -> Option<CurveId> {
-    ensure_master_principal();
-    
-    USER_DB.with(|user_db| {
-        user_db.borrow().iter().find_map(|(id, u)| if *u == uuid { Some(id.clone()) } else { None })
-    })
-}
-
-#[query]
-pub fn get_uuid_by_curveid(id: CurveId) -> Option<UUID> {
-    ensure_master_principal();
-
-    USER_DB.with(|user_db| {
-        user_db.borrow().get(&id).map(|s| s.clone())
-    })
-}
-
-#[query]
-pub fn get_all_curveids() -> Vec<CurveId> {
-    ensure_master_principal();
-
-    USER_DB.with(|user_db| {
-        user_db.borrow().keys().collect()
-    })
 }
 
