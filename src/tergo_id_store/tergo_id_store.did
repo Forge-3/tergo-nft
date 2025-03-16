@@ -1,5 +1,6 @@
+type Result = variant { Ok : text; Err : text };
 service : (principal) -> {
-  add_user : (text, principal) -> ();
+  add_user : (text, principal) -> (Result);
   change_master_principal : (principal) -> ();
   get_all_userids : () -> (vec text) query;
   get_principal_by_userid : (text) -> (opt principal) query;

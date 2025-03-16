@@ -39,6 +39,7 @@ use icrc_ledger_types::{
 };
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
+use sha2::{Digest, Sha256};
 
 #[derive(CandidType, Serialize, Deserialize, Clone)]
 pub struct Icrc7Token {
@@ -98,7 +99,12 @@ impl Icrc7Token {
             metadata.insert("Logo".into(), Value::Text(logo.clone()));
         }
         if let Some(ref image) = self.token_image {
-            metadata.insert("Image_Size".into(), Value::Text(image.len().to_string()));
+            let mut hasher = Sha256::new();
+            hasher.update(image);
+            let hash_result = hasher.finalize();
+            let hash_hex = format!("{:x}", hash_result);
+
+            metadata.insert("Image_Hash".into(), Value::Text(hash_hex));
         }
         metadata
     }

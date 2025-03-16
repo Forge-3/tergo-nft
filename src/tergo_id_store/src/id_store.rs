@@ -41,24 +41,25 @@ fn ensure_master_principal() {
 }
 
 #[update]
-pub fn add_user(user_id: UserId, principal: Principal) {
+pub fn add_user(user_id: UserId, principal: Principal) -> Result<String, String> {
     ensure_master_principal();
 
     USER_DB.with(|user_db| {
         let mut db = user_db.borrow_mut();
 
         if db.contains_key(&user_id) {
-            ic_cdk::trap("User ID already exists.");
+            return Err("User already exists".to_string());
         }
 
         if db.values().any(|p| p == principal) {
-            ic_cdk::trap("Principal already associated with a user.");
+            return Err("Principal already associated with a user.".to_string());
         }
 
         db.insert(user_id.clone(), principal);
-        ic_cdk::println!("user_id: {}", user_id);
+        ic_cdk::println!("user_id: {}, principal: {}", user_id, principal); //TODO comment
 
-    });
+        Ok("User added successfully".to_string())
+    })
 }
 
 #[update]
