@@ -38,4 +38,4 @@ dfx deploy tergo_nft_archive --argument "(record {
   max_pages= 3;
 })"
 
-dfx deploy tergo_id_store --argument "(principal \"lzqbk-6v6gv-xjntg-xclu6-ievdu-5ygoq-qk7wp-yjwol-svzwg-fs5gs-qqe\")"
+dfx deploy tergo_id_store --argument "(opt principal \"lzqbk-6v6gv-xjntg-xclu6-ievdu-5ygoq-qk7wp-yjwol-svzwg-fs5gs-qqe\")"

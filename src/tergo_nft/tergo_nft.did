@@ -113,6 +113,7 @@ type MintArg = record {
   to : Account;
   token_image : opt blob;
   token_id : nat;
+  additional_metadata : opt vec record { text; Value };
   memo : opt blob;
   from_subaccount : opt blob;
   token_description : opt text;

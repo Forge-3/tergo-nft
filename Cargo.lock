@@ -337,6 +337,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-canister-log"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb82c4f617ecff6e452fe65af0489626ec7330ffe3eedd9ea14e6178eea48d1a"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "ic-cdk"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -586,6 +595,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e819f2bc632f285be6d7cd36e25940d45b2391dd6d9b939e79de557f7014248"
 
 [[package]]
+name = "ryu"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
+
+[[package]]
 name = "serde"
 version = "1.0.216"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -622,6 +637,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.90",
+]
+
+[[package]]
+name = "serde_json"
+version = "1.0.140"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
+dependencies = [
+ "itoa",
+ "memchr",
+ "ryu",
+ "serde",
 ]
 
 [[package]]
@@ -734,6 +761,7 @@ version = "0.1.0"
 dependencies = [
  "candid",
  "hex",
+ "ic-canister-log",
  "ic-cdk",
  "ic-cdk-macros",
  "ic-cdk-timers",
@@ -741,6 +769,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_cbor",
+ "serde_json",
 ]
 
 [[package]]
@@ -751,6 +780,7 @@ dependencies = [
  "ciborium",
  "crc32fast",
  "hex",
+ "ic-canister-log",
  "ic-cdk",
  "ic-cdk-macros",
  "ic-cdk-timers",
@@ -760,6 +790,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_cbor",
+ "serde_json",
  "sha2",
 ]
 

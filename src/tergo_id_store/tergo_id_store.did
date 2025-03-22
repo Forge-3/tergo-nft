@@ -1,10 +1,10 @@
 type Result = variant { Ok : text; Err : text };
-service : (principal) -> {
+service : (opt principal) -> {
   add_user : (text, principal) -> (Result);
   change_master_principal : (principal) -> ();
   get_all_userids : () -> (vec text) query;
   get_principal_by_userid : (text) -> (opt principal) query;
   get_userid_by_principal : (principal) -> (opt text) query;
   get_userids_by_principals : (vec principal) -> (vec opt text) query;
-  remove_user_by_userid : (text) -> ();
+  remove_user_by_userid : (text) -> (Result);
 }

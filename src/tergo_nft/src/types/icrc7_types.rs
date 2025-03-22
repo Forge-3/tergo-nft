@@ -342,6 +342,7 @@ pub struct MintArg {
     pub token_description: Option<String>,
     pub token_logo: Option<String>,
     pub token_image: Option<Vec<u8>>,
+    pub additional_metadata: Option<BTreeMap<String, Value>>, 
 }
 
 pub type MintResult = Result<u128, MintError>;

@@ -40,6 +40,8 @@ use icrc_ledger_types::{
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use sha2::{Digest, Sha256};
+use ic_canister_log::log;
+use crate::logs::{INFO, DEBUG};
 
 #[derive(CandidType, Serialize, Deserialize, Clone)]
 pub struct Icrc7Token {
@@ -49,6 +51,7 @@ pub struct Icrc7Token {
     pub token_logo: Option<String>,
     pub token_owner: Account,
     pub token_image: Option<Vec<u8>>,
+    pub additional_metadata: Option<BTreeMap<String, Value>>, 
 }
 
 impl Storable for Icrc7Token {
@@ -71,6 +74,7 @@ impl Icrc7Token {
         token_logo: Option<String>,
         token_owner: Account,
         token_image: Option<Vec<u8>>,
+        additional_metadata: Option<BTreeMap<String, Value>>, 
     ) -> Self {
         Self {
             token_id,
@@ -79,6 +83,7 @@ impl Icrc7Token {
             token_owner,
             token_description,
             token_image,
+            additional_metadata,
         }
     }
 
@@ -87,11 +92,12 @@ impl Icrc7Token {
     }
 
     fn token_metadata(&self) -> Icrc7TokenMetadata {
-        let mut metadata = BTreeMap::<String, Value>::new();
-        metadata.insert("Id".into(), Value::Text(self.token_id.clone().to_string()));
-        metadata.insert("Owner".into(), Value::Text(self.token_owner.clone().to_string()));
-        metadata.insert("Name".into(), Value::Text(self.token_name.clone()));
-        metadata.insert("Symbol".into(), Value::Text(self.token_name.clone()));
+        let mut metadata = BTreeMap::<String, Value>::from([
+            ("Id".into(), Value::Text(self.token_id.to_string())),
+            ("Owner".into(), Value::Text(self.token_owner.to_string())),
+            ("Name".into(), Value::Text(self.token_name.clone())),
+            ("Symbol".into(), Value::Text(self.token_name.clone())),
+        ]);
         if let Some(ref description) = self.token_description {
             metadata.insert("Description".into(), Value::Text(description.clone()));
         }
@@ -106,6 +112,11 @@ impl Icrc7Token {
 
             metadata.insert("Image_Hash".into(), Value::Text(hash_hex));
         }
+
+        if let Some(ref additional) = self.additional_metadata {
+            metadata.extend(additional.clone());
+        }
+
         metadata
     }
 
@@ -677,6 +688,7 @@ impl State {
             arg.token_logo,
             arg.to.clone(),
             arg.token_image,
+            arg.additional_metadata.clone(), 
         );
         let token_metadata = token.token_metadata();
         self.tokens.insert(arg.token_id, token);
@@ -1153,7 +1165,7 @@ impl State {
             );
             txn_results.insert(index, Some(Ok(tid)))
         }
-        ic_cdk::println!("txn_results");
+        // log!(DEBUG, "txn_results");
         return txn_results;
     }
 
@@ -1933,16 +1945,14 @@ pub async fn call_sync_logs(
 
 async fn call_append_blocks(archive_log_canister: Principal, blocks: Vec<Block>) -> SyncReceipt {
     // sync logs
-    ic_cdk::println!("call_append: {:?}", blocks);
+    log!(INFO, "call_append: {:?}", blocks);
 
-    ic_cdk::println!(
-        "append_blocks archive_log_canister: {:?}",
-        archive_log_canister.to_text()
-    );
+    log!(INFO, "append_blocks archive_log_canister: {:?}", archive_log_canister.to_text());
+
     let call_result: Result<(), _> =
         ic_cdk::api::call::call(archive_log_canister, "append_blocks", (blocks.clone(),)).await;
 
-    // ic_cdk::println!("call_append_blocks call_result: {:?}", call_result);
+    // log!(DEBUG, "call_append_blocks call_result: {:?}", call_result);
 
     match call_result {
         Ok(_) => Ok(blocks.len() as u32),
@@ -1982,31 +1992,32 @@ async fn clean_local_ledger_task() {
     let archive_count = STATE.with(|s| s.borrow().archive_ledger_info.archives.len());
 
     if txn_ledger_size < max_active_records as u64 {
-        ic_cdk::println!("clean_local_ledger_task: txn_ledger_size < max_active_records, don't clean if not necessary");
+        log!(INFO, "clean_local_ledger_task: txn_ledger_size < max_active_records, don't clean if not necessary");
         return;
     }
 
     if txn_ledger_size < settle_to_records as u64 {
-        ic_cdk::println!("clean_local_ledger_task: txn_ledger_size < settle_to_records, don't clean if not necessary");
+        log!(INFO, "clean_local_ledger_task: txn_ledger_size < settle_to_records, don't clean if not necessary");
         return;
     }
 
     STATE.with(|s: &RefCell<State>| s.borrow_mut().archive_ledger_info.is_cleaning = true);
-    ic_cdk::println!("clean_local_ledger_task: Now we are cleaning");
+    log!(INFO, "clean_local_ledger_task: Now we are cleaning");
 
     let mut last_archive: Option<(Principal, TransactionRange)> = None;
     let mut capacity: u128 = 0;
 
     if archive_count == 0 {
-        ic_cdk::println!("clean_local_ledger_task: create a new archive canister");
+        log!(INFO, "clean_local_ledger_task: create a new archive canister");
         let create_args: ArchiveCreateArgs = ArchiveCreateArgs {
             max_pages: max_archive_pages,
             max_records: max_active_records,
             first_index: 0,
             controllers: archive_controllers,
         };
-        // ic_cdk::println!("local_cycles: {}", local_cycles);
-        // ic_cdk::println!("archive_cycles: {}", archive_cycles);
+        log!(DEBUG, "local_cycles: {}", local_cycles);
+        log!(DEBUG, "archive_cycles: {}", archive_cycles);
+
 
         if local_cycles > (archive_cycles * 2) {
             let archive_canister: Result<Principal, String> =
@@ -2025,9 +2036,7 @@ async fn clean_local_ledger_task() {
                     capacity = max_records_in_archive_instance;
                 }
                 Err(_) => {
-                    ic_cdk::println!(
-                        "clean_local_ledger_task: create a new archive canister error"
-                    );
+                    log!(INFO, "clean_local_ledger_task: create a new archive canister error");
                     STATE.with(|s: &RefCell<State>| {
                         s.borrow_mut().archive_ledger_info.is_cleaning = false
                     });
@@ -2049,9 +2058,7 @@ async fn clean_local_ledger_task() {
 
         if let Some(current_last_archive) = current_last_archive {
             if current_last_archive.1.length >= max_records_in_archive_instance {
-                ic_cdk::println!(
-                    "clean_local_ledger_task: old archive is full, create a new archive canister"
-                );
+                log!(INFO, "clean_local_ledger_task: old archive is full, create a new archive canister");
 
                 let create_args: ArchiveCreateArgs = ArchiveCreateArgs {
                     max_pages: max_archive_pages,
@@ -2076,9 +2083,7 @@ async fn clean_local_ledger_task() {
                             capacity = max_records_in_archive_instance;
                         }
                         Err(_) => {
-                            ic_cdk::println!(
-                                "clean_local_ledger_task: create a new archive canister error"
-                            );
+                            log!(INFO, "clean_local_ledger_task: create a new archive canister error");
                             STATE.with(|s: &RefCell<State>| {
                                 s.borrow_mut().archive_ledger_info.is_cleaning = false
                             });
@@ -2124,10 +2129,7 @@ async fn clean_local_ledger_task() {
         }
         let to_archive_amount = to_archive_vec.len() as u128;
 
-        ic_cdk::println!(
-            "clean_local_ledger_task: to_archive size {}",
-            to_archive_amount
-        );
+        log!(INFO, "clean_local_ledger_task: to_archive size {}", to_archive_amount);
 
         let call_result = call_append_blocks(last_archive.0, to_archive_vec).await;
 
@@ -2151,7 +2153,7 @@ async fn clean_local_ledger_task() {
                 STATE.with(|s: &RefCell<State>| {
                     s.borrow_mut().archive_ledger_info.is_cleaning = false
                 });
-                ic_cdk::println!("clean_local_ledger_task: to_archive fail");
+                log!(INFO, "clean_local_ledger_task: to_archive fail");
             }
         }
     }

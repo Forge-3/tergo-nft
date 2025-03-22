@@ -8,6 +8,7 @@ pub mod cycles;
 pub mod methods;
 pub mod state;
 pub mod archive;
+pub mod logs;
 
 use crate::cycles::WalletReceiveResult;
 use crate::types::icrc37_types::*;

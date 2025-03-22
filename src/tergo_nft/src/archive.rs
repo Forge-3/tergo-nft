@@ -4,6 +4,8 @@ use ic_cdk::api::management_canister::{
     provisional::CanisterSettings,
 };
 use serde::Serialize;
+use ic_canister_log::log;
+use crate::logs::INFO;
 
 use crate::types::icrc3_types::{ArchiveCreateArgs, IndexType};
 
@@ -60,7 +62,7 @@ pub async fn create_archive_canister(arg: ArchiveCreateArgs) -> Result<Principal
         Err((code, msg)) => return Err(format!("Rejection Code: {:?}, Message: {:?}", code, msg)),
         Ok((principal,)) => principal.canister_id,
     };
-    ic_cdk::println!("new archive canister: {}", principal);
+    log!(INFO, "new archive canister: {}", principal);
 
     let init_arg = ArchiveInitArgs::new(arg.max_pages, arg.max_records, arg.first_index);
     let init_arg = Encode!(&init_arg).unwrap();
