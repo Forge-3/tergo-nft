@@ -1,42 +1,44 @@
 use candid::Principal;
-use ic_cdk_macros::{update, query, init, post_upgrade, pre_upgrade};
+use ic_cdk_macros::{update, query, init};
 use ic_cdk::api::caller;
 use std::cell::RefCell;
 use ic_stable_structures::{
+    StableCell,
     StableBTreeMap, 
     memory_manager::{MemoryId, MemoryManager, VirtualMemory},
     DefaultMemoryImpl,
 };
 use ic_canister_log::log;
 use crate::logs::{DEBUG, INFO};
-use ic_cdk::storage;
 
 pub type UserId = String;
 
+const MASTER_PRINCIPAL_MEMORY_ID: MemoryId = MemoryId::new(0);
 const USER_DB_MEMORY_ID: MemoryId = MemoryId::new(1);
 
 thread_local! {
     static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> = RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
-    static USER_DB: RefCell<StableBTreeMap<UserId, Principal, VirtualMemory<DefaultMemoryImpl>>> = MEMORY_MANAGER
-    .with(|m| 
-        RefCell::new(
-            StableBTreeMap::init(
-                m.borrow().get(USER_DB_MEMORY_ID)
-            )
+    static USER_DB: RefCell<StableBTreeMap<UserId, Principal, VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(USER_DB_MEMORY_ID)),
         )
     );
-
-    static MASTER_PRINCIPAL: RefCell<Option<Principal>> = RefCell::new(None);
+    static MASTER_PRINCIPAL: RefCell<StableCell<Option<Principal>, VirtualMemory<DefaultMemoryImpl>>> = RefCell::new(
+        StableCell::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MASTER_PRINCIPAL_MEMORY_ID)),
+            None,
+        ).expect("Failed to initialize StableCell")
+    );
 }
 
 #[init]
 pub fn init(master_principal: Option<Principal>) {
-    MASTER_PRINCIPAL.with(|mp| *mp.borrow_mut() = master_principal);
+    MASTER_PRINCIPAL.with(|mp| mp.borrow_mut().set(master_principal).expect("Failed to set master principal"));
 }
 
 fn ensure_master_principal() {
     let caller = caller();
-    let is_master = MASTER_PRINCIPAL.with(|mp| *mp.borrow() == Some(caller));
+    let is_master = MASTER_PRINCIPAL.with(|mp| *mp.borrow().get() == Some(caller));
 
     if !is_master {
         ic_cdk::trap("Unauthorized: Only the master wallet can perform this action.");
@@ -132,19 +134,7 @@ pub fn change_master_principal(new_master_principal: Principal) {
     ensure_master_principal();
 
     MASTER_PRINCIPAL.with(|mp| {
-        *mp.borrow_mut() = Some(new_master_principal);
+        mp.borrow_mut().set(Some(new_master_principal)).expect("Failed to set new master principal");
     });
-}
-
-#[pre_upgrade]
-fn pre_upgrade() {
-    let master = MASTER_PRINCIPAL.with(|mp| *mp.borrow());
-    storage::stable_save((master,)).expect("Failed to save master principal");
-}
-
-#[post_upgrade]
-fn post_upgrade() {
-    let (master,): (Option<Principal>,) = storage::stable_restore().expect("Failed to restore master principal");
-    MASTER_PRINCIPAL.with(|mp| *mp.borrow_mut() = master);
 }
 
